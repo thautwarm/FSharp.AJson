@@ -25,11 +25,20 @@ type S<'a> =
 printfn "%A" <| deserialize<S<int>> "{\"_TAG\": \"S1\", \"_VALUES\": [3]}"
 (* S1 1 *)
     
-printfn "%A" <| deserialize<int testRecord> "{\"x\": 2, \"y\": [3, 5, 6], \"c\": null}"
+let data = deserialize<int testRecord> "{\"x\": 2, \"y\": [3, 5, 6], \"c\": null}"
+printfn "%A" <| data
 (*
 { x = 2
   y = array('i', [3, 5, 6])
   c = None } *)
+
+let s1 = S1 r
+let s2 = S2 ("string", r)
+let s3 = S3 [|s1; s2|]
+let s4 = S4 [r; r]
+let s5 = S5 ([|sbyte 2|], [s1; s2; s3; s4])
+printfn "%A" <| s5 = deserialize<S<testRecord<int>>> (serialize s5)
+(* true *)
 ```
 
 ## Features
@@ -50,7 +59,21 @@ type Json =
 - [x] deserializing/serializing records and ADTs like that in [FSharp.Json](https://github.com/vsapronov/FSharp.Json):
    - [x] `AJson.serialize any`
    - [x] `AJson.deserialize<MyType> str`
-   
+
+
+Supported Types:
+
+```
+supported-type ::= 
+        | int8 | int16 | int32 | int64
+        | decimal | float32 | double
+        | char | string | unit
+        | record-type of supported-type
+        | union-type of supported-type
+        | array<supported-type>
+        | list<supported-type>
+        | option<supported-type>
+```
 
 ## Motivation
 
