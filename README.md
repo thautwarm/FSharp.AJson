@@ -45,10 +45,10 @@ type Json =
         | JDict of (string * Json) ResizeArray
 ```
 
-- [ ] To be complelete, it can be slow. Hence, you might consider alternatives when JSON parsing is the performance bottleneck.
+- To be complelete, it can be slow. Hence, you might consider alternatives when JSON parsing is the performance bottleneck.
 - [x] Parsing raw JSON data: `AJson.parseJson: string -> Json`
-- [ ] deserializing/serializing records and ADTs like that in [FSharp.Json](https://github.com/vsapronov/FSharp.Json):
-   - [ ] `AJson.serialize any`
+- [x] deserializing/serializing records and ADTs like that in [FSharp.Json](https://github.com/vsapronov/FSharp.Json):
+   - [x] `AJson.serialize any`
    - [x] `AJson.deserialize<MyType> str`
    
 

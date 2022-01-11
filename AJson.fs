@@ -10,7 +10,7 @@ type Json =
         | JList of Json ResizeArray
         | JDict of (string * Json) ResizeArray
     with
-     member this.kind =
+    member this.kind =
         match this with
         | JInt _ -> "int"
         | JFloat _ -> "float"
@@ -19,6 +19,7 @@ type Json =
         | JNull _ -> "null"
         | JList _ -> "list"
         | JDict _ -> "dict"
+
 
 module Parsec =
     type Parser<'a> = int -> string -> int * 'a
@@ -133,7 +134,7 @@ module Parsec =
     let pStr : Parser<string> =
         let apply (i: int) (s: string) =
             if i >= s.Length || s.[i] <> '"' then
-                invalidOp $"imcomplete parsing for string"
+                invalidOp $"incomplete parsing for string"
             let buf = System.Text.StringBuilder()
             let mutable find_end = false
             let mutable i = i + 1
@@ -315,20 +316,22 @@ let rec inline fromJson<'a> data =
     unbox<'a> (objFromJson (typeof<'a>) data)
 
 and objFromJson (t: System.Type) (data: Json) =
-    if obj.ReferenceEquals(typeof<int>, t) then
-        box <| int (int64FromJson data)
+    if obj.ReferenceEquals(typeof<int8>, t) then
+        box <| int8 (int64FromJson data)
     elif obj.ReferenceEquals(typeof<int16>, t) then
         box <| int16 (int64FromJson data)
-    elif obj.ReferenceEquals(typeof<int8>, t) then
-        box <| int8 (int64FromJson data)
+    elif obj.ReferenceEquals(typeof<int>, t) then
+        box <| int (int64FromJson data)
     elif obj.ReferenceEquals(typeof<int64>, t) then
         box <| (int64FromJson data)
-    elif obj.ReferenceEquals(typeof<int8>, t) then
-        box <| int8 (int64FromJson data)
+
     elif obj.ReferenceEquals(typeof<float>, t) then
         box <| float (doubleFromJson data)
     elif obj.ReferenceEquals(typeof<double>, t) then
         box <| (doubleFromJson data)
+    elif obj.ReferenceEquals(typeof<decimal>, t) then
+        box <| (decimal <| doubleFromJson data)
+
     elif obj.ReferenceEquals(typeof<bool>, t) then
         box <| (boolFromJson data)
     elif obj.ReferenceEquals(typeof<char>, t) then
@@ -336,6 +339,8 @@ and objFromJson (t: System.Type) (data: Json) =
         if s.Length <> 1 then invalidOp $"{s} to char"
         else
             box <| s.[0]
+    elif obj.ReferenceEquals(typeof<unit>, t) then
+        box <| unitFromJson data
     elif obj.ReferenceEquals(typeof<string>, t) then
         box <| stringFromJson data
     elif t.IsArray then
@@ -441,14 +446,206 @@ and objFromJson (t: System.Type) (data: Json) =
         invalidOp $"unsupported data type fromJson: {t}"
 
 
-#if FABLE_COMPILER
+let rec objToJson (t: System.Type) (o: obj) =
+    if obj.ReferenceEquals(typeof<int8>, t) then
+        JInt (int64 <| unbox<int8> o)
+    elif obj.ReferenceEquals(typeof<int16>, t) then
+        JInt (int64 <| unbox<int16> o)
+    elif obj.ReferenceEquals(typeof<int>, t) then
+        JInt (unbox<int> o)
+    elif obj.ReferenceEquals(typeof<int64>, t) then
+        JInt (unbox<int64> o)
+    elif obj.ReferenceEquals(typeof<float>, t) then
+        JFloat (double <| unbox<float> o)
+    elif obj.ReferenceEquals(typeof<double>, t) then
+        JFloat (unbox<double> o)
+    elif obj.ReferenceEquals(typeof<decimal>, t) then
+        JFloat (double <| unbox<decimal> o)
+    elif obj.ReferenceEquals(typeof<bool>, t) then
+        JBool (unbox<bool> o)
+    elif obj.ReferenceEquals(typeof<char>, t) then
+        JStr (string <| unbox<char> o)
+    elif obj.ReferenceEquals(typeof<unit>, t) then
+        JInt 0
+    elif obj.ReferenceEquals(typeof<string>, t) then
+        JStr (unbox<string> o)
+    elif t.IsArray then
+        let eltype = t.GetElementType()
 
+
+        // integers
+        if eltype == typeof<int> then
+            (unbox<array<int>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<int64> then
+            (unbox<array<int64>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<int16> then
+            (unbox<array<int16>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<int8> then
+            (unbox<array<int8>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<uint32> then
+            (unbox<array<uint32>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<uint64> then
+            (unbox<array<uint64>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<uint8> then
+            (unbox<array<uint8>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<uint16> then
+            (unbox<array<uint16>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+
+        // floats
+        elif eltype == typeof<float> then
+            (unbox<array<float>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<double> then
+            (unbox<array<double>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<decimal>  then
+            (unbox<array<decimal>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        // others
+        elif eltype == typeof<string> then
+            (unbox<array<string>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<bool> then
+            (unbox<array<bool>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<unit> then
+            (unbox<array<unit>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        elif eltype == typeof<char> then
+            (unbox<array<char>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        else
+            (unbox<array<obj>> o)
+            |> Array.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+        // let array = System.Array.CreateInstance(eltype, seq.Count)
+        // for i = 0 to seq.Count - 1 do
+        //     array.SetValue(objFromJson eltype (seq.[i]), i)
+        // box <| array
+    elif t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<option<_>> then
+        let eltype = t.GenericTypeArguments.[0]
+        match unbox<option<obj>>(o) with
+        | None -> JNull
+        | Some i -> objToJson eltype i
+    elif t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<list<_>> then
+        let eltype = t.GenericTypeArguments.[0]
+        (unbox<list<obj>> o)
+            |> List.map (fun it -> objToJson eltype it)
+            |> ResizeArray
+            |> JList
+    elif FSharpType.IsRecord t then
+        let fields = FSharpType.GetRecordFields t
+                     |> Array.map (fun f -> (f.Name, objToJson f.PropertyType (FSharpValue.GetRecordField(o, f))))
+                     |> ResizeArray
+        JDict fields
+    elif FSharpType.IsTuple t then
+        let eltypes = FSharpType.GetTupleElements t
+        FSharpValue.GetTupleFields o
+        |> Array.mapi (fun i e -> objToJson eltypes.[i] e)
+        |> ResizeArray
+        |> JList
+    elif FSharpType.IsUnion t then
+        let case, args = FSharpValue.GetUnionFields(o, t)
+        let fieldtypes = case.GetFields() |> Array.map (fun f -> f.PropertyType)
+        [|
+            (ADT_TAG, JStr case.Name);
+            (ADT_VALS,
+                args
+                |> Array.mapi (fun i e -> objToJson fieldtypes.[i] e)
+                |> ResizeArray
+                |> JList)
+        |]
+        |> ResizeArray
+        |> JDict
+    else
+        invalidOp $"unsupported data type fromJson: {t}"
+
+let escape_string (s : string) =
+   let buf = System.Text.StringBuilder(s.Length)
+   let rep c =
+      match c with
+      | '\\' -> buf.Append("\\\\")
+      | '\r' -> buf.Append "\\r"
+      | '\n' -> buf.Append "\\n"
+      | '\t' -> buf.Append "\\t"
+      | '\f' -> buf.Append "\\f"
+      | '\b' -> buf.Append "\\b"
+      | '"' -> buf.Append "\\\""
+      | _ -> buf.Append c
+   for i = 0 to s.Length - 1 do
+       ignore(rep (s.[i]))
+   buf.ToString()
+
+let rec serializeJSON : Json -> string = fun x ->
+    match x with
+    | JInt i -> i.ToString()
+    | JFloat f -> f.ToString()
+    | JBool true -> "true"
+    | JBool false -> "false"
+    | JStr s -> "\"" + escape_string s + "\""
+    | JNull -> "null"
+    | JList seq ->
+        "[" +  String.concat "," (Seq.map serializeJSON seq) + "]"
+    | JDict pairs ->
+        "{" +  String.concat "," (Seq.map (fun (k, v) ->
+            "\"" + escape_string k + "\"" + ":" + serializeJSON v) pairs)
+            + "}"
+
+
+
+
+
+#if FABLE_COMPILER
 let inline deserialize<'a> s =
     let json = parseJson s
     objFromJson typeof<'a> json :?> 'a
 
+let inline serialize<'a> (a: 'a) =
+    box a
+    |> objToJson (typeof<'a>)
+    |> serializeJSON
 #else
 
 let inline deserialize<'a> s = FSharp.Json.Json.deserialize<'a> s
+let inline serialize<'a> (a: 'a) = FSharp.Json.Json.serialize a
 
 #endif

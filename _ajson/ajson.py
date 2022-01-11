@@ -1,17 +1,17 @@
 from __future__ import annotations
 from typing import (Any, List, Tuple, Callable, TypeVar, Generic)
-from .fable_modules.fable_library.array import (contains, initialize, map, fill, find_index, find as find_1)
-from .fable_modules.fable_library.decimal import Decimal
+from .fable_modules.fable_library.array import (contains, initialize, map, fill, find_index, find as find_1, map_indexed)
+from .fable_modules.fable_library.decimal import (Decimal, to_number)
 from .fable_modules.fable_library.double import parse as parse_1
-from .fable_modules.fable_library.list import (FSharpList, is_empty, head, tail, empty, cons)
-from .fable_modules.fable_library.long import (parse, equals, from_bits, to_int, from_value)
-from .fable_modules.fable_library.option import some
-from .fable_modules.fable_library.reflection import (TypeInfo, class_type, float64_type, bool_type, string_type, array_type, tuple_type, union_type, int32_type, int16_type, int8_type, char_type, is_array, get_element_type, uint32_type, uint8_type, uint16_type, unit_type, is_generic_type, equals as equals_1, get_generic_type_definition, obj_type, option_type, get_generics, list_type, is_record, name, get_record_elements, make_record, is_tuple, get_tuple_elements, make_tuple, is_union, get_union_cases, get_union_case_fields, make_union)
-from .fable_modules.fable_library.seq import find
-from .fable_modules.fable_library.string import (to_text, interpolate)
-from .fable_modules.fable_library.system_text import (StringBuilder__ctor, StringBuilder__Append_244C7CD6)
+from .fable_modules.fable_library.list import (FSharpList, is_empty, head, tail, empty, cons, map as map_1)
+from .fable_modules.fable_library.long import (parse, equals, from_bits, to_int, from_value, from_integer)
+from .fable_modules.fable_library.option import (some, Option, value as value_29)
+from .fable_modules.fable_library.reflection import (TypeInfo, class_type, float64_type, bool_type, string_type, array_type, tuple_type, union_type, int8_type, int16_type, int32_type, char_type, unit_type, is_array, get_element_type, uint32_type, uint8_type, uint16_type, is_generic_type, equals as equals_1, get_generic_type_definition, obj_type, option_type, get_generics, list_type, is_record, name, get_record_elements, make_record, is_tuple, get_tuple_elements, make_tuple, is_union, get_union_cases, get_union_case_fields, make_union, get_record_field, get_tuple_fields, get_union_fields)
+from .fable_modules.fable_library.seq import (find, map as map_2)
+from .fable_modules.fable_library.string import (to_text, interpolate, join)
+from .fable_modules.fable_library.system_text import (StringBuilder__ctor, StringBuilder__Append_244C7CD6, StringBuilder__ctor_Z524259A4, StringBuilder__Append_Z721C83C5)
 from .fable_modules.fable_library.types import (Union, to_string, FSharpRef, Int32Array, Int16Array, Int8Array, Uint32Array, Uint8Array, Uint16Array, Float64Array)
-from .fable_modules.fable_library.util import (string_hash, ignore, uncurry, get_enumerator, dispose)
+from .fable_modules.fable_library.util import (string_hash, ignore, uncurry, get_enumerator, dispose, int64_to_string)
 
 _A = TypeVar("_A")
 
@@ -373,7 +373,7 @@ Parsec_pNumber : Callable[[int, str], Tuple[int, str]] = apply
 def apply(i: int) -> Callable[[str], Tuple[int, str]]:
     def arrow_22(s: str, i: int=i) -> Tuple[int, str]:
         if True if (i >= len(s)) else (s[i] != "\""):
-            raise Exception("imcomplete parsing for string")
+            raise Exception("incomplete parsing for string")
         
         buf : Any = StringBuilder__ctor()
         find_end : bool = False
@@ -790,26 +790,26 @@ class evidence_1(Union, Generic[_A]):
 evidence_1_reflection = expr_33
 
 def obj_from_json(t: Any, data: Json) -> Any:
-    if int32_type is t:
-        return int(to_int(int64from_json(data)))
+    if int8_type is t:
+        return (int(to_int(int64from_json(data))) + 0x80 & 0xFF) - 0x80
     
     elif int16_type is t:
         return (int(to_int(int64from_json(data))) + 0x8000 & 0xFFFF) - 0x8000
     
-    elif int8_type is t:
-        return (int(to_int(int64from_json(data))) + 0x80 & 0xFF) - 0x80
+    elif int32_type is t:
+        return int(to_int(int64from_json(data)))
     
     elif class_type("System.Int64") is t:
         return int64from_json(data)
     
-    elif int8_type is t:
-        return (int(to_int(int64from_json(data))) + 0x80 & 0xFF) - 0x80
-    
     elif float64_type is t:
         return double_from_json(data)
     
     elif float64_type is t:
         return double_from_json(data)
+    
+    elif class_type("System.Decimal") is t:
+        return Decimal(double_from_json(data))
     
     elif bool_type is t:
         return bool_from_json(data)
@@ -822,6 +822,10 @@ def obj_from_json(t: Any, data: Json) -> Any:
         else: 
             return s[0]
         
+    
+    elif unit_type is t:
+        value_10 : None = unit_from_json(data)
+        return None
     
     elif string_type is t:
         return string_from_json(data)
@@ -1030,6 +1034,237 @@ def obj_from_json(t: Any, data: Json) -> Any:
     
     else: 
         raise Exception(to_text(interpolate("unsupported data type fromJson: %P()", [t])))
+    
+
+
+def obj_to_json(t_mut: Any, o_mut: Any) -> Json:
+    while True:
+        (t, o) = (t_mut, o_mut)
+        if int8_type is t:
+            return Json(0, from_integer(o, False, 0))
+        
+        elif int16_type is t:
+            return Json(0, from_integer(o, False, 1))
+        
+        elif int32_type is t:
+            return Json(0, from_integer(o, False, 2))
+        
+        elif class_type("System.Int64") is t:
+            return Json(0, o)
+        
+        elif float64_type is t:
+            return Json(1, o)
+        
+        elif float64_type is t:
+            return Json(1, o)
+        
+        elif class_type("System.Decimal") is t:
+            return Json(1, to_number(o))
+        
+        elif bool_type is t:
+            return Json(2, o)
+        
+        elif char_type is t:
+            return Json(3, o)
+        
+        elif unit_type is t:
+            return Json(0, from_integer(0, False, 2))
+        
+        elif string_type is t:
+            return Json(3, o)
+        
+        elif is_array(t):
+            eltype : Any = get_element_type(t)
+            if eltype is int32_type:
+                def mapping(it: int, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it)
+                
+                return Json(5, list(map(mapping, o, None)))
+            
+            elif eltype == class_type("System.Int64"):
+                def mapping_1(it_1: Any, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_1)
+                
+                return Json(5, list(map(mapping_1, o, None)))
+            
+            elif eltype is int16_type:
+                def mapping_2(it_2: int, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_2)
+                
+                return Json(5, list(map(mapping_2, o, None)))
+            
+            elif eltype is int8_type:
+                def mapping_3(it_3: int, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_3)
+                
+                return Json(5, list(map(mapping_3, o, None)))
+            
+            elif eltype is uint32_type:
+                def mapping_4(it_4: int, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_4)
+                
+                return Json(5, list(map(mapping_4, o, None)))
+            
+            elif eltype == class_type("System.UInt64"):
+                def mapping_5(it_5: Any, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_5)
+                
+                return Json(5, list(map(mapping_5, o, None)))
+            
+            elif eltype is uint8_type:
+                def mapping_6(it_6: int, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_6)
+                
+                return Json(5, list(map(mapping_6, o, None)))
+            
+            elif eltype is uint16_type:
+                def mapping_7(it_7: int, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_7)
+                
+                return Json(5, list(map(mapping_7, o, None)))
+            
+            elif eltype is float64_type:
+                def mapping_8(it_8: float, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_8)
+                
+                return Json(5, list(map(mapping_8, o, None)))
+            
+            elif eltype is float64_type:
+                def mapping_9(it_9: float, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_9)
+                
+                return Json(5, list(map(mapping_9, o, None)))
+            
+            elif eltype == class_type("System.Decimal"):
+                def mapping_10(it_10: Any, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_10)
+                
+                return Json(5, list(map(mapping_10, o, None)))
+            
+            elif eltype is string_type:
+                def mapping_11(it_11: str, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_11)
+                
+                return Json(5, list(map(mapping_11, o, None)))
+            
+            elif eltype is bool_type:
+                def mapping_12(it_12: bool, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_12)
+                
+                return Json(5, list(map(mapping_12, o, None)))
+            
+            elif eltype is unit_type:
+                def mapping_13(t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, None)
+                
+                return Json(5, list(map(mapping_13, o, None)))
+            
+            elif eltype is char_type:
+                def mapping_14(it_14: str, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_14)
+                
+                return Json(5, list(map(mapping_14, o, None)))
+            
+            else: 
+                def mapping_15(it_15: Any, t: Any=t, o: Any=o) -> Json:
+                    return obj_to_json(eltype, it_15)
+                
+                return Json(5, list(map(mapping_15, o, None)))
+            
+        
+        elif equals_1(get_generic_type_definition(t), option_type(obj_type)) if (is_generic_type(t)) else (False):
+            eltype_1 : Any = get_generics(t)[0]
+            match_value : Option[Any] = o
+            if match_value is not None:
+                t_mut = eltype_1
+                o_mut = value_29(match_value)
+                continue
+            
+            else: 
+                return Json(4)
+            
+        
+        elif equals_1(get_generic_type_definition(t), list_type(obj_type)) if (is_generic_type(t)) else (False):
+            eltype_2 : Any = get_generics(t)[0]
+            def mapping_16(it_16: Any, t: Any=t, o: Any=o) -> Json:
+                return obj_to_json(eltype_2, it_16)
+            
+            return Json(5, list(map_1(mapping_16, o)))
+        
+        elif is_record(t):
+            def mapping_17(f: Any, t: Any=t, o: Any=o) -> Tuple[str, Json]:
+                return (name(f), obj_to_json(f[1], get_record_field(o, f)))
+            
+            return Json(6, list(map(mapping_17, get_record_elements(t), None)))
+        
+        elif is_tuple(t):
+            eltypes : List[Any] = get_tuple_elements(t)
+            def mapping_18(i_1: int, e: Any, t: Any=t, o: Any=o) -> Json:
+                return obj_to_json(eltypes[i_1], e)
+            
+            return Json(5, list(map_indexed(mapping_18, get_tuple_fields(o), None)))
+        
+        elif is_union(t):
+            pattern_input : Tuple[Any, List[Any]] = get_union_fields(o, t)
+            case : Any = pattern_input[0]
+            def mapping_19(f_1: Any, t: Any=t, o: Any=o) -> Any:
+                return f_1[1]
+            
+            fieldtypes : List[Any] = map(mapping_19, get_union_case_fields(case), None)
+            def mapping_20(i_2: int, e_1: Any, t: Any=t, o: Any=o) -> Json:
+                return obj_to_json(fieldtypes[i_2], e_1)
+            
+            return Json(6, list([(ADT_TAG, Json(3, name(case))), (ADT_VALS, Json(5, list(map_indexed(mapping_20, pattern_input[1], None))))]))
+        
+        else: 
+            raise Exception(to_text(interpolate("unsupported data type fromJson: %P()", [t])))
+        
+        break
+
+
+def escape_string(s: str) -> str:
+    buf : Any = StringBuilder__ctor_Z524259A4(len(s))
+    for i in range(0, (len(s) - 1) + 1, 1):
+        def arrow_58(s: str=s) -> Any:
+            c : str = s[i]
+            return StringBuilder__Append_Z721C83C5(buf, "\\b") if (c == "\b") else (StringBuilder__Append_Z721C83C5(buf, "\\t") if (c == "\t") else (StringBuilder__Append_Z721C83C5(buf, "\\n") if (c == "\n") else (StringBuilder__Append_Z721C83C5(buf, "\\f") if (c == "\f") else (StringBuilder__Append_Z721C83C5(buf, "\\r") if (c == "\r") else (StringBuilder__Append_Z721C83C5(buf, "\\\"") if (c == "\"") else (StringBuilder__Append_Z721C83C5(buf, "\\\\") if (c == "\\") else (StringBuilder__Append_244C7CD6(buf, c))))))))
+        
+        ignore(arrow_58())
+    return to_string(buf)
+
+
+def serialize_json(x: Json) -> str:
+    if x.tag == 1:
+        return to_string(x.fields[0])
+    
+    elif x.tag == 2:
+        if x.fields[0]:
+            return "true"
+        
+        else: 
+            return "false"
+        
+    
+    elif x.tag == 3:
+        return ("\"" + escape_string(x.fields[0])) + "\""
+    
+    elif x.tag == 4:
+        return "null"
+    
+    elif x.tag == 5:
+        def arrow_59(x_1: Json, x: Json=x) -> str:
+            return serialize_json(x_1)
+        
+        return ("[" + join(",", map_2(arrow_59, x.fields[0]))) + "]"
+    
+    elif x.tag == 6:
+        def arrow_60(tupled_arg: Tuple[str, Json], x: Json=x) -> str:
+            return ((("\"" + escape_string(tupled_arg[0])) + "\"") + ":") + serialize_json(tupled_arg[1])
+        
+        return ("{" + join(",", map_2(arrow_60, x.fields[0]))) + "}"
+    
+    else: 
+        return int64_to_string(x.fields[0])
     
 
 
