@@ -4,11 +4,15 @@ F# Json serialization/deserialization for algebriac data types and nominal recor
 
 This parser has been already tested against a large and real-world JSON file: https://github.com/thautwarm/parser-data 
 
+Merit: **it depends on no bacnkend specific operations and shall work for targets like .NET, JavaScript and Python!**
+
 ## Usage
 
 To load JSON configuations in F\#, no matter which codegen target(.NET, JS, Python, etc) is used.
 
 ```F#
+
+type 'a testRecord ={ x : 'a; y : int array; c : option<int> }
 
 type S<'a> =
     | S1 of 'a
@@ -17,8 +21,15 @@ type S<'a> =
     | S4 of 'a list
     | S5 of int8 array * 'a
     
-let x = "{\"_TAG\": \"S1\", \"_VALUES\": [3]}"
-    printfn "%A" <| deserialize<S<int>> x (* S1 1 *)
+
+printfn "%A" <| deserialize<S<int>> "{\"_TAG\": \"S1\", \"_VALUES\": [3]}"
+(* S1 1 *)
+    
+printfn "%A" <| deserialize<int testRecord> "{\"x\": 2, \"y\": [3, 5, 6], \"c\": null}"
+(*
+{ x = 2
+  y = array('i', [3, 5, 6])
+  c = None } *)
 ```
 
 ## Features
