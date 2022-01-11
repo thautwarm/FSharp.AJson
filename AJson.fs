@@ -440,6 +440,15 @@ and objFromJson (t: System.Type) (data: Json) =
     else
         invalidOp $"unsupported data type fromJson: {t}"
 
+
+#if FABLE_COMPILER
+
 let inline deserialize<'a> s =
     let json = parseJson s
     objFromJson typeof<'a> json :?> 'a
+
+#else
+
+let inline deserialize<'a> s = FSharp.Json.Json.deserialize<'a> s
+
+#endif
